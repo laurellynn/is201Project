@@ -209,6 +209,13 @@ p + ul, p + ol {
     margin-top: 0.5rem;
 }
 
+.tableau-wrapper {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--light-border);
+    background: var(--warm-white);
+    max-width: 100%;
+}
 /* ---------- Family Cards ---------- */
 .family-grid {
     display: grid;
