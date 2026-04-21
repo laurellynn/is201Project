@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe</title>
+<style>
+  body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
+  h1 { font-size: 24px; font-weight: 500; margin-bottom: 0.5rem; }
+  .scoreboard { display: flex; justify-content: center; gap: 12px; width: 300px; margin: 0.5rem auto; }
+  .score-card { flex: 1; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px 8px; text-align: center; }
+  .score-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .score-val { font-size: 26px; font-weight: 500; }
+  .score-val.you { color: #185FA5; }
+  .score-val.cpu { color: #993C1D; }
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 300px; margin: 1rem auto; }
+  .cell { aspect-ratio: 1; background: #fff; border: 1px solid #ddd; border-radius: 8px; font-size: 48px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+  .cell:hover:not(.taken) { background: #f0f0f0; }
+  .cell.taken { cursor: default; }
+  .cell.x-cell { color: #185FA5; }
+  .cell.o-cell { color: #993C1D; }
+  .cell.win-cell { background: #ddeeff; }
+  .status { font-size: 20px; font-weight: 500; min-height: 30px; margin: 0.25rem 0; }
+  button { margin-top: 1rem; padding: 10px 28px; font-size: 15px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+  button:hover { background: #f0f0f0; }
+</style>
+</head>
+<body>
+<h1>Tic Tac Toe</h1>
+<div class="scoreboard">
+  <div class="score-card">
+    <div class="score-label">You (X)</div>
+    <div class="score-val you" id="score-you">0</div>
+  </div>
+  <div class="score-card">
+    <div class="score-label">Draws</div>
+    <div class="score-val" id="score-draw">0</div>
+  </div>
+  <div class="score-card">
+    <div class="score-label">Computer (O)</div>
+    <div class="score-val cpu" id="score-cpu">0</div>
+  </div>
+</div>
+<p class="status" id="status"></p>
+<div class="board" id="board"></div>
+<button id="restart" style="display:none">Play again</button>
+<script>
+const WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let board, gameOver, playerTurn;
+let scores = { you: 0, cpu: 0, draw: 0 };
+let roundCount = 0;
+const WIN_LIMIT = 5;
+let matchOver = false;
+
+function init() {
+  board = Array(9).fill(null);
+  gameOver = false;
+  roundCount++;
+  playerTurn = (roundCount % 2 === 1);
+  document.getElementById('restart').style.display = 'none';
+
+  if (playerTurn) {
+    document.getElementById('status').textContent = 'Your turn — pick a square';
+    render();
+  } else {
+    document.getElementById('status').textContent = 'Computer goes first…';
+    render();
+    setTimeout(computerMove, 700);
+  }
+}
+
+function render() {
+  const el = document.getElementById('board');
+  el.innerHTML = '';
+  board.forEach((v, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell' + (v ? ' taken' : '') + (v === 'X' ? ' x-cell' : v === 'O' ? ' o-cell' : '');
+    cell.textContent = v || '';
+    if (!v && !gameOver && playerTurn) cell.onclick = () => playerMove(i);
+    el.appendChild(cell);
+  });
+}
+
+function updateScoreboard() {
+  document.getElementById('score-you').textContent = scores.you;
+  document.getElementById('score-cpu').textContent = scores.cpu;
+  document.getElementById('score-draw').textContent = scores.draw;
+}
+
+function checkWinner(b) {
+  for (const [a, c, d] of WIN_LINES) {
+    if (b[a] && b[a] === b[c] && b[a] === b[d]) return { winner: b[a], line: [a, c, d] };
+  }
+  if (b.every(v => v)) return { winner: 'draw' };
+  return null;
+}
+
+function highlight(line) {
+  const cells = document.querySelectorAll('.cell');
+  line.forEach(i => cells[i].classList.add('win-cell'));
+}
+
+function endGame(result) {
+  gameOver = true;
+  const status = document.getElementById('status');
+  const restartBtn = document.getElementById('restart');
+
+  if (result.winner === 'X') {
+    scores.you++;
+    highlight(result.line);
+    status.textContent = 'You win!';
+  } 
+  else if (result.winner === 'O') {
+    scores.cpu++;
+    highlight(result.line);
+    status.textContent = 'You lose!';
+  } 
+  else {
+    scores.draw++;
+    status.textContent = "It's a draw!";
+  }
+
+  updateScoreboard();
+
+  // CHECK MATCH WIN
+  if (scores.you === WIN_LIMIT || scores.cpu === WIN_LIMIT) {
+    matchOver = true;
+
+    if (scores.you === WIN_LIMIT) {
+      status.textContent = "🎉 You won the match!";
+    } else {
+      status.textContent = "💻 Computer won the match!";
+    }
+
+    restartBtn.textContent = "Play Again (New Match)";
+    restartBtn.style.display = 'block';
+    restartBtn.onclick = resetMatch;
+    return;
+  }
+
+  restartBtn.style.display = 'block';
+  restartBtn.textContent = "Play again";
+  restartBtn.onclick = init;
+}
+
+function resetMatch() {
+  scores = { you: 0, cpu: 0, draw: 0 };
+  updateScoreboard();
+  roundCount = 0;
+  matchOver = false;
+  init();
+}
+
+function playerMove(i) {
+  if (board[i] || gameOver || !playerTurn) return;
+  board[i] = 'X';
+  playerTurn = false;
+  render();
+  const result = checkWinner(board);
+  if (result) { endGame(result); return; }
+  document.getElementById('status').textContent = 'Computer is thinking…';
+  setTimeout(computerMove, 500);
+}
+
+function computerMove() {
+  const move = bestMove(board);
+  if (move === null) return;
+  board[move] = 'O';
+  playerTurn = true;
+  render();
+  const result = checkWinner(board);
+  if (result) { endGame(result); return; }
+  document.getElementById('status').textContent = 'Your turn — pick a square';
+}
+
+function minimax(b, isMax) {
+  const r = checkWinner(b);
+  if (r) { if (r.winner === 'O') return 10; if (r.winner === 'X') return -10; return 0; }
+  const empty = b.map((v,i) => v ? null : i).filter(i => i !== null);
+  if (!empty.length) return 0;
+  let best = isMax ? -Infinity : Infinity;
+  for (const i of empty) {
+    b[i] = isMax ? 'O' : 'X';
+    const score = minimax(b, !isMax);
+    b[i] = null;
+    best = isMax ? Math.max(best, score) : Math.min(best, score);
+  }
+  return best;
+}
+
+function bestMove(b) {
+  const empty = b.map((v,i) => v ? null : i).filter(i => i !== null);
+  if (!empty.length) return null;
+  let best = -Infinity, move = empty[0];
+  for (const i of empty) {
+    b[i] = 'O';
+    const score = minimax(b, false);
+    b[i] = null;
+    if (score > best) { best = score; move = i; }
+  }
+  return move;
+}
+
+document.getElementById('restart').onclick = init;
+
+document.getElementById('status').textContent = 'First one to five wins!';
+setTimeout(init, 3000);
+</script>
+
+</body>
+</html>
